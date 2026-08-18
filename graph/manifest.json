@@ -1,0 +1,28 @@
+{
+  "created_at_utc": "2026-08-18T15:41:04.646433+00:00",
+  "sources": {
+    "product_root": "oliveyoung_data",
+    "ingredient_master": "oliveyoung_data/성분/kcia_mfds_성분사전_병합.csv",
+    "functional_report": "oliveyoung_data/성분/mfds_기능성화장품_보고품목정보.csv"
+  },
+  "counts": {
+    "product_nodes": 5475,
+    "ingredient_nodes": 23310,
+    "master_ingredient_nodes": 21931,
+    "raw_only_ingredient_nodes": 1379,
+    "function_nodes": 28,
+    "product_contains_ingredient_edges": 256665,
+    "ingredient_has_function_edges": 63909,
+    "product_claims_function_edges": 11
+  },
+  "ingredient_edge_match_method": {
+    "exact_alias": 252421,
+    "unmatched": 2365,
+    "ambiguous_alias": 1879
+  },
+  "notes": [
+    "전성분 순서는 함량의 정확한 값이 아닌 원문 표기 순서다.",
+    "RULES 출처 엣지는 이름 기반 추론이며 공식 효능 근거와 분리해야 한다.",
+    "식약처 상품 직접 주장은 올리브영 상품명 정규화 완전일치만 연결했다."
+  ]
+}

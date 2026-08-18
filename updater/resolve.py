@@ -7,12 +7,25 @@ from purpose_map import to_tags
 from rules import classify
 
 BASE=os.path.dirname(os.path.abspath(__file__))
+MERGED=os.path.normpath(os.path.join(BASE, '..', 'oliveyoung_data', '성분', 'kcia_mfds_성분사전_병합.csv'))
+KCIA_PATH=os.environ.get('INGREDIENT_MASTER', MERGED if os.path.exists(MERGED) else os.path.join(BASE, 'kcia.csv'))
 KCIA={}   # key -> (성분명, 영문명, 배합목적)
-for r in csv.DictReader(open(BASE+'/kcia.csv',encoding='utf-8-sig')):
-    rec=(r['성분명'], r['영문명'], r['배합목적'])
-    for k in (r['성분명'], r['구명칭']):
-        if k: KCIA.setdefault(canon(k), rec)
-    if r['영문명']: KCIA.setdefault('EN:'+canon_en(r['영문명']), rec)
+for r in csv.DictReader(open(KCIA_PATH,encoding='utf-8-sig')):
+    # 병합 파일은 KCIA 값을 우선하고, KCIA에 없던 식약처 값은 MFDS 값을 보완값으로 사용한다.
+    standard = r.get('성분명') or r.get('MFDS_국문명') or ''
+    inci = r.get('영문명') or r.get('MFDS_영문명') or ''
+    purpose = r.get('배합목적') or ''
+    rec=(standard, inci, purpose)
+    aliases=(
+        r.get('성분명'), r.get('구명칭'), r.get('MFDS_국문명'), r.get('MFDS_이명'),
+        r.get('영문명'), r.get('MFDS_영문명'),
+    )
+    for k in aliases:
+        if not k: continue
+        if re.match(r'^[A-Za-z0-9,\-/() ]+$', k or ''):
+            KCIA.setdefault('EN:'+canon_en(k), rec)
+        else:
+            KCIA.setdefault(canon(k), rec)
 for r in csv.DictReader(open(BASE+'/kcia_patch.csv',encoding='utf-8')):
     KCIA[canon(r['성분명'])]=(r['성분명'],'',r['배합목적'])
 GOSI={canon(r['성분명']):(r['고시기능성'],r['고시함량'])
