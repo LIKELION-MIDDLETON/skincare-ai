@@ -16,9 +16,15 @@
 | 2 | `build_features.py` | 전성분 → 효능 15축 + 코메도·향료 | 1분 |
 | 3 | `fetch_reviews.py` | 리뷰 집계 라벨 (`/stats` API) | 2~5분 |
 | 4 | `rebuild.py` | 모델 예측 → `적합도_전상품.csv` | 10초 |
+| 5 | `build_capacity.py` | `oliveyoung_data/*/*.csv`의 용량_증량 원문 파싱 → `상품_용량.csv` | 수 초 |
 
 현재 추천 패키지는 토너·로션·크림뿐 아니라 클렌저/리무버, 에센스/세럼,
 선케어, 마스크/팩, 미스트/특수케어까지 8개 카테고리 슬롯을 사용합니다.
+
+`build_capacity.py`는 다른 단계와 별개로 `oliveyoung_data/`(카테고리별 크롤링,
+graph/ 빌드와 공유하는 원본)를 입력으로 씁니다. `상품_용량.csv`는
+`ml_engine.py`가 추천 결과의 1일 사용량(`일일용량`)을 계산할 때 goods_no로
+조인해서 씁니다.
 
 ## 권장 주기
 

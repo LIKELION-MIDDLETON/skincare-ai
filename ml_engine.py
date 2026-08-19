@@ -30,6 +30,13 @@ def products():
         for r in csv.DictReader(open(os.path.join(BASE,"적합도_전상품.csv"),encoding="utf-8-sig")):
             ml[r["goods_no"]]={k:float(r[k] or 0) for k in ML_TARGETS}
             ml[r["goods_no"]]["출처"]=r["출처"]
+        cap={}
+        cap_path=os.path.join(BASE,"상품_용량.csv")
+        if os.path.exists(cap_path):
+            for r in csv.DictReader(open(cap_path,encoding="utf-8-sig")):
+                try: v=float(r["용량"]) if r["용량"] else None
+                except: v=None
+                cap[r["goods_no"]]={"용량":v,"단위":r["단위"] or None,"원문":r["용량_원문"]}
         _P=[]
         for r in csv.DictReader(open(os.path.join(BASE,"상품별_효능_v4.csv"),encoding="utf-8-sig")):
             try: r["_price"]=int(r["sale_price"] or 0)
@@ -40,6 +47,7 @@ def products():
             r["_com"]=int(r.get("코메도점수") or 0)
             r["_uns"]=r.get("무향판정")=="Y"
             r["_ml"]=ml.get(r["goods_no"])
+            r["_cap"]=cap.get(r["goods_no"])
             _P.append(r)
     return _P
 
@@ -89,16 +97,21 @@ def recommend(probs, skin_type=None, alpha=0.6, budget_total=None,
         best=max(cand,key=lambda p:score(p,dx,w,prof,alpha)[0])
         s,rule,ml=score(best,dx,w,prof,alpha)
         m=best["_ml"] or {}
+        c=best["_cap"] or {}
+        cap_val=c.get("용량"); cap_unit=c.get("단위") or ""
+        일일가격=round(best["_price"]/7)
+        일일용량=round(cap_val/7,1) if cap_val is not None else None
         items.append({"순서":order,"슬롯":prof["슬롯3"] if order==3 else slot,
             "goods_no":best["goods_no"],"brand":best["brand"],"name":best["name"],
-            "가격":best["_price"],"점수":round(s,3),"규칙점수":round(rule,3),"ML점수":round(ml,3),
+            "일일가격":일일가격,"일일용량":f"{일일용량}{cap_unit}" if 일일용량 is not None else None,
+            "점수":round(s,3),"규칙점수":round(rule,3),"ML점수":round(ml,3),
             "적합도":{k:m.get(k) for k in ML_W.get(dx,{})},"적합도출처":m.get("출처"),
             "고시":best.get("고시기능성성분",""),"무향":best["_uns"],"코메도":best["_com"]})
         total+=best["_price"]
     return {"진단":dx,"헤드라인":f"당신은 {prof['라벨']}입니다","패키지명":f"{prof['라벨']} 패키지",
             "트리아지":prof["트리아지"],"의료상담권고":prof["트리아지"]=="의료필요",
             "요약":prof["요약"],"신뢰도":round(conf,3),"판정근거":why,"ML비중":alpha,
-            "구성":items,"총액":total}
+            "구성":items,"총액_일일":round(total/7)}
 
 def render(r):
     o=["진단 결과",r["헤드라인"],f"  {r['요약']}","",f"┌ {r['패키지명']}"]
@@ -106,8 +119,10 @@ def render(r):
         o.append(f"│ {it['순서']}. {it['슬롯']}")
         o.append(f"│    {it['brand']} {it['name'][:36]}")
         ad=" ".join(f"{k}{v:.0f}" for k,v in it["적합도"].items() if v is not None)
-        o.append(f"│    {ad} ({it['적합도출처']}) | {it['가격']:,}원")
-    o.append(f"└ 총 {r['총액']:,}원")
+        o.append(f"│    {ad} ({it['적합도출처']})")
+        cap=f" | 1일 사용량 {it['일일용량']}" if it["일일용량"] else ""
+        o.append(f"│    1일 가격 {it['일일가격']:,}원{cap}")
+    o.append(f"└ 총 하루 {r['총액_일일']:,}원")
     if r["의료상담권고"]: o.append("\n⚠ 피부과 진료를 먼저 받으세요.")
     return "\n".join(o)
 
