@@ -2,6 +2,7 @@
 """ML 적합도 예측을 반영한 다중 카테고리 패키지 추천 (하이브리드)"""
 import csv, os, math, re
 from package_rules import SLOTS, DX, SKIN_ADJ, MEDICAL
+import daily_usage
 BASE=os.path.dirname(os.path.abspath(__file__))
 EFF=["보습","유연","밀폐보습","장벽강화","진정","항산화","미백","주름개선",
      "피지조절","피지흡착","여드름","각질제거","자외선차단","재생","탄력"]
@@ -22,6 +23,22 @@ ML_W = {
 }
 ML_TARGETS=["건성적합","지성적합","저자극","진정효과","보습효과","미백효과"]
 
+# 선스틱(문질러 바르는 고체)·선스프레이/선패치(분사·부착형)는 "1일 몇 g/ml"로
+# 쪼개는 게 실사용과 안 맞아서, 1일 용량·1일 가격 대신 전체 용량과 정가를
+# 그대로 보여준다.
+NO_DAILY_SPLIT={"선스틱","선스프레이_선패치"}
+
+def _fmt_daily(value, unit):
+    """1일 사용량 표시 문자열. 매/개처럼 낱개 단위는 소수로 쪼갤 수 없으니
+    반내림~반올림 범위(예: "1~2매")로 보여주고, ml/g처럼 계량 가능한
+    단위는 그대로 소수 한 자리로 표시한다."""
+    if value is None:
+        return None
+    if unit in ("매","개"):
+        lo,hi = math.floor(value),math.ceil(value)
+        return f"{lo}{unit}" if lo==hi else f"{lo}~{hi}{unit}"
+    return f"{round(value,1)}{unit}"
+
 _P=None
 def products():
     global _P
@@ -36,7 +53,8 @@ def products():
             for r in csv.DictReader(open(cap_path,encoding="utf-8-sig")):
                 try: v=float(r["용량"]) if r["용량"] else None
                 except: v=None
-                cap[r["goods_no"]]={"용량":v,"단위":r["단위"] or None,"원문":r["용량_원문"]}
+                cap[r["goods_no"]]={"용량":v,"단위":r["단위"] or None,"원문":r["용량_원문"],
+                                     "사용방법":r.get("사용방법") or ""}
         _P=[]
         for r in csv.DictReader(open(os.path.join(BASE,"상품별_효능_v4.csv"),encoding="utf-8-sig")):
             try: r["_price"]=int(r["sale_price"] or 0)
@@ -99,19 +117,33 @@ def recommend(probs, skin_type=None, alpha=0.6, budget_total=None,
         m=best["_ml"] or {}
         c=best["_cap"] or {}
         cap_val=c.get("용량"); cap_unit=c.get("단위") or ""
-        일일가격=round(best["_price"]/7)
-        일일용량=round(cap_val/7,1) if cap_val is not None else None
+        if best["카테고리"] in NO_DAILY_SPLIT:
+            일일가격,일일용량=None,None
+            전체용량=f"{cap_val}{cap_unit}" if cap_val is not None else (c.get("원문") or None)
+            정가=best["_price"]
+        else:
+            전체용량,정가=None,None
+            table=daily_usage.daily_amount(best["카테고리"])
+            if table and cap_val and cap_unit==table[1]:
+                # 카테고리별 1일 권장량만큼 정가를 비례 배분한다(마진 없음).
+                일일용량_수,단위=table
+                일일가격=round(best["_price"]*일일용량_수/cap_val)
+                일일용량=_fmt_daily(일일용량_수,단위)
+            else:
+                # 권장량 표가 없거나 단위가 안 맞으면 총용량/7로 대체한다.
+                일일가격=round(best["_price"]/7)
+                일일용량=_fmt_daily(cap_val/7 if cap_val is not None else None,cap_unit)
         items.append({"순서":order,"슬롯":prof["슬롯3"] if order==3 else slot,
             "goods_no":best["goods_no"],"brand":best["brand"],"name":best["name"],
-            "일일가격":일일가격,"일일용량":f"{일일용량}{cap_unit}" if 일일용량 is not None else None,
+            "일일가격":일일가격,"일일용량":일일용량,"전체용량":전체용량,"정가":정가,
             "점수":round(s,3),"규칙점수":round(rule,3),"ML점수":round(ml,3),
             "적합도":{k:m.get(k) for k in ML_W.get(dx,{})},"적합도출처":m.get("출처"),
             "고시":best.get("고시기능성성분",""),"무향":best["_uns"],"코메도":best["_com"]})
-        total+=best["_price"]
+        total+=일일가격 if 일일가격 is not None else round(best["_price"]/7)
     return {"진단":dx,"헤드라인":f"당신은 {prof['라벨']}입니다","패키지명":f"{prof['라벨']} 패키지",
             "트리아지":prof["트리아지"],"의료상담권고":prof["트리아지"]=="의료필요",
             "요약":prof["요약"],"신뢰도":round(conf,3),"판정근거":why,"ML비중":alpha,
-            "구성":items,"총액_일일":round(total/7)}
+            "구성":items,"총액_일일":total}
 
 def render(r):
     o=["진단 결과",r["헤드라인"],f"  {r['요약']}","",f"┌ {r['패키지명']}"]
@@ -119,9 +151,13 @@ def render(r):
         o.append(f"│ {it['순서']}. {it['슬롯']}")
         o.append(f"│    {it['brand']} {it['name'][:36]}")
         ad=" ".join(f"{k}{v:.0f}" for k,v in it["적합도"].items() if v is not None)
-        o.append(f"│    {ad} ({it['적합도출처']})")
-        cap=f" | 1일 사용량 {it['일일용량']}" if it["일일용량"] else ""
-        o.append(f"│    1일 가격 {it['일일가격']:,}원{cap}")
+        o.append(f"│    {ad}")
+        if it["일일가격"] is not None:
+            cap=f" | 1일 사용량 {it['일일용량']}" if it["일일용량"] else ""
+            o.append(f"│    1일 가격 {it['일일가격']:,}원{cap}")
+        else:
+            vol=f" ({it['전체용량']})" if it["전체용량"] else ""
+            o.append(f"│    전체 가격 {it['정가']:,}원{vol}")
     o.append(f"└ 총 하루 {r['총액_일일']:,}원")
     if r["의료상담권고"]: o.append("\n⚠ 피부과 진료를 먼저 받으세요.")
     return "\n".join(o)
