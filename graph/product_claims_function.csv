@@ -1,0 +1,12 @@
+﻿product_id,function_id,function_name,source,evidence_type,evidence_strength,match_method,report_id,report_item_name,ee_code,ee_name
+A000000140606,FUNC:미백,미백,MFDS_REPORT,기능성화장품_보고품목,regulatory,exact_normalized_product_name,2019012658,시루콧토브라이트솔루션마스크팩,1,피부의 미백에 도움을 준다.
+A000000150208,FUNC:미백,미백,MFDS_REPORT,기능성화장품_보고품목,regulatory,exact_normalized_product_name,2020017747,코스알엑스에이씨컬렉션블레미쉬케어시트마스크,1,피부의 미백에 도움을 준다.
+A000000160785,FUNC:미백,미백,MFDS_REPORT,기능성화장품_보고품목,regulatory,exact_normalized_product_name,2021024423,미샤비타씨플러스잡티씨앰플패드,1,피부의 미백에 도움을 준다.
+A000000110704,FUNC:미백,미백,MFDS_REPORT,기능성화장품_보고품목,regulatory,exact_normalized_product_name,2017009379,착한팩토리광채수면크림팩,3,피부의 미백에 도움을 준다. 피부의 주름개선에 도움을 준다.
+A000000110704,FUNC:주름개선,주름개선,MFDS_REPORT,기능성화장품_보고품목,regulatory,exact_normalized_product_name,2017009379,착한팩토리광채수면크림팩,3,피부의 미백에 도움을 준다. 피부의 주름개선에 도움을 준다.
+A000000137470,FUNC:미백,미백,MFDS_REPORT,기능성화장품_보고품목,regulatory,exact_normalized_product_name,2018000337,바르테라올인원젤모이스춰라이저,3,피부의 미백에 도움을 준다. 피부의 주름개선에 도움을 준다.
+A000000137470,FUNC:주름개선,주름개선,MFDS_REPORT,기능성화장품_보고품목,regulatory,exact_normalized_product_name,2018000337,바르테라올인원젤모이스춰라이저,3,피부의 미백에 도움을 준다. 피부의 주름개선에 도움을 준다.
+B000000223873,FUNC:미백,미백,MFDS_REPORT,기능성화장품_보고품목,regulatory,exact_normalized_product_name,2019021502,블랙몬스터화이트올인원더블세럼,1,피부의 미백에 도움을 준다.
+A000000210476,FUNC:미백,미백,MFDS_REPORT,기능성화장품_보고품목,regulatory,exact_normalized_product_name,2019021897,더샘클래식옴므올인원에센스,3,피부의 미백에 도움을 준다. 피부의 주름개선에 도움을 준다.
+A000000210476,FUNC:주름개선,주름개선,MFDS_REPORT,기능성화장품_보고품목,regulatory,exact_normalized_product_name,2019021897,더샘클래식옴므올인원에센스,3,피부의 미백에 도움을 준다. 피부의 주름개선에 도움을 준다.
+A000000206338,FUNC:미백,미백,MFDS_REPORT,기능성화장품_보고품목,regulatory,exact_normalized_product_name,2024003150,후시다인더마트러블에이씨카밍스팟젤,1,피부의 미백에 도움을 준다.

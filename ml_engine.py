@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
-"""ML 적합도 예측을 반영한 3슬롯 패키지 추천 (하이브리드)"""
+"""ML 적합도 예측을 반영한 다중 카테고리 패키지 추천 (하이브리드)"""
 import csv, os, math, re
 from package_rules import SLOTS, DX, SKIN_ADJ, MEDICAL
 BASE=os.path.dirname(os.path.abspath(__file__))
 EFF=["보습","유연","밀폐보습","장벽강화","진정","항산화","미백","주름개선",
      "피지조절","피지흡착","여드름","각질제거","자외선차단","재생","탄력"]
-BAD=re.compile(r"(바디|body|헤어|샴푸|풋|핸드|제모|두피|네일"
-               r"|클렌징|클렌저|클렌즈|워시|리무버|미셀라|클린|딥클린|필링|스크럽"
-               r"|아이크림|스팟|트리트먼트|오인트|패치|마스크팩|시트팩|팩\b)",re.I)
+# 현재 수집한 카테고리를 슬롯별로 추천하므로 클렌징·팩·패치 등을
+# 상품명 기준으로 일괄 제외하지 않는다. 얼굴 외 부위 제품만 공통 제외한다.
+BAD=re.compile(r"(바디|body|헤어|샴푸|풋|핸드|제모|두피|네일)",re.I)
 
 # 진단 -> ML 타깃 가중치 (리뷰 라벨로 학습된 축)
 ML_W = {
@@ -77,7 +77,7 @@ def recommend(probs, skin_type=None, alpha=0.6, budget_total=None,
         for k,v in extra_rule.items(): w[k]=w.get(k,0)+v
     if force_unscented or prefer_unscented: prof["무향"]=True
     if extra_ml: prof["_extra_ml"]=extra_ml
-    cap=budget_total//3 if budget_total else None
+    cap=budget_total//len(SLOTS) if budget_total else None
     items=[]; total=0
     for order,slot,cats in SLOTS:
         cand=[p for p in products() if p["카테고리"] in cats and not BAD.search(p["name"])]
