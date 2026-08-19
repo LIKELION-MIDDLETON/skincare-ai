@@ -1,6 +1,6 @@
 # 피부 상태 분석 모델 (이미지 CNN + 텍스트 LLM 2단계 파이프라인)
 
-담당 파트: 이미지를 CNN으로 1차 분류 -> 설문 응답 + CNN 결과를 무료 LLM API(Gemini)에 넣어 2차 종합 분석.
+담당 파트: 이미지를 CNN으로 1차 분류 -> 설문 응답 + CNN 결과를 LLM API(OpenAI GPT)에 넣어 2차 종합 분석.
 
 ## 폴더 구조
 
@@ -11,7 +11,7 @@ skin_analysis/
   train_cnn.py         # CNN 학습 스크립트
   cnn_infer.py          # 학습된 CNN으로 1차 추론
   survey.py              # 사용자 입력용 정해진 설문 문항 정의 + 답변 -> 텍스트 변환
-  llm_analyzer.py         # 텍스트 + CNN 결과 -> Gemini API 2차 분석
+  llm_analyzer.py         # 텍스트 + CNN 결과 -> OpenAI GPT API 2차 분석
   pipeline.py               # 전체 파이프라인 (CNN -> LLM) 실행 진입점
   requirements.txt
   .env.example
@@ -31,9 +31,9 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-`.env` 파일을 열어 `GEMINI_API_KEY`에 키를 넣습니다. https://aistudio.google.com/apikey 에서
-구글 계정만으로 신용카드 없이 무료 발급됩니다. 무료 티어는 모델별로 분당/일별 요청 한도가 있으니
-(Flash 모델 기준 대략 하루 수백 회 수준, 시점에 따라 변동) 트래픽이 늘면 요금제 전환을 고려하세요.
+`.env` 파일을 열어 `OPENAI_API_KEY`에 키를 넣습니다. https://platform.openai.com/api-keys 에서
+발급받습니다. Gemini와 달리 무료 티어가 없고 결제 수단 등록 및 사용량 과금이 필요하니,
+트래픽 규모에 맞춰 사용량 한도(usage limit)를 미리 설정해두는 것을 권장합니다.
 
 ## 2. 학습 데이터 준비
 
@@ -166,6 +166,6 @@ FastAPI 등 서버 파트를 다른 팀원이 맡는다면, 위 `run()` 호출�
 
 - CNN은 사전학습된 backbone(EfficientNet-B0 기본값)을 전이학습해 사용합니다. `config.py`의 `CNN_BACKBONE`을
   `resnet50`으로 바꾸면 ResNet50로도 학습할 수 있습니다.
-- LLM은 Gemini 무료 API(`gemini-3.6-flash`)를 사용합니다. `google-genai` SDK의 Interactions API +
+- LLM은 OpenAI GPT API(`gpt-4o-mini`)를 사용합니다. `openai` SDK의 구조화 출력(`beta.chat.completions.parse`) +
   Pydantic 스키마로 항상 정해진 JSON 형식만 반환하도록 강제했습니다.
 - LLM 결과는 의학적 진단이 아닌 참고 정보입니다. 실제 서비스에 배포 시 면책 문구 노출이 필요합니다.
