@@ -1,6 +1,20 @@
-__pycache__/
-*.pyc
+# 환경/비밀값
+.env
+
+# 가상환경
 .venv/
 venv/
-.env
+
+# 데이터셋 (용량이 커서 git으로 관리하지 않음)
+data/
+raw_data/
+
+# 학습된 모델 가중치 (용량이 커서 git으로 관리하지 않음)
+*.pt
+
+# 파이썬 캐시
+__pycache__/
+*.pyc
+
+# OS
 .DS_Store
