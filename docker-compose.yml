@@ -1,0 +1,17 @@
+# 프로젝트 루트에 두고 실행:  docker compose up -d
+services:
+  skin-analysis:                 # 유정 — CNN + LLM 진단
+    build: ./model
+    ports: ["8001:8001"]
+    env_file: ./model/.env       # OPENAI_API_KEY 등
+    restart: unless-stopped
+
+  recommend-api:                 # 철중 — 화장품 추천
+    build: .
+    ports: ["8000:8000"]
+    restart: unless-stopped
+
+# 백엔드는 아래 두 주소로 호출
+#   http://skin-analysis:8001/analyze     (컨테이너 내부)
+#   http://recommend-api:8000/recommend
+# 로컬 테스트는 localhost:8001 / localhost:8000
