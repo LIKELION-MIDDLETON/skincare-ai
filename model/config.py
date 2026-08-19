@@ -9,7 +9,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-load_dotenv()  # .env 파일에서 GEMINI_API_KEY 등을 읽어옴
+load_dotenv()  # .env 파일에서 OPENAI_API_KEY 등을 읽어옴
 
 # ---- 경로 설정 ----
 BASE_DIR = Path(__file__).resolve().parent
@@ -26,6 +26,6 @@ EPOCHS = 15
 LEARNING_RATE = 1e-4
 
 # ---- LLM(2차 종합 분석) 설정 ----
-# Gemini 무료 API 사용. https://aistudio.google.com/apikey 에서 신용카드 없이 발급.
-LLM_MODEL = "gemini-3.5-flash-lite"  # thinking 없이 빠르게 응답 (일반 flash는 thinking으로 10~20s+ 소요)
-LLM_API_KEY_ENV = "GEMINI_API_KEY"
+# OpenAI GPT API 사용. https://platform.openai.com/api-keys 에서 발급 (유료, 카드 등록 필요).
+LLM_MODEL = "gpt-4o-mini"  # 빠르고 저렴한 모델. 구조화 출력(response_format) 지원 필요
+LLM_API_KEY_ENV = "OPENAI_API_KEY"

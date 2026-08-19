@@ -1,12 +1,11 @@
-"""텍스트 설명 + CNN 결과를 받아 Gemini 무료 API로 2차 종합 분석을 수행하는 모듈."""
+"""텍스트 설명 + CNN 결과를 받아 OpenAI GPT API로 2차 종합 분석을 수행하는 모듈."""
 
 from __future__ import annotations
 
 import os
 from typing import List
 
-from google import genai
-from google.genai import types
+from openai import OpenAI
 from pydantic import BaseModel, Field
 
 import config
@@ -34,16 +33,16 @@ class SkinAnalysisResult(BaseModel):
 
 
 class SkinLLMAnalyzer:
-    """텍스트 + CNN 결과를 받아 Gemini 무료 API로 2차 종합 분석을 수행한다."""
+    """텍스트 + CNN 결과를 받아 OpenAI GPT API로 2차 종합 분석을 수행한다."""
 
     def __init__(self, model: str = config.LLM_MODEL, api_key: str | None = None):
         api_key = api_key or os.getenv(config.LLM_API_KEY_ENV)
         if not api_key:
             raise RuntimeError(
                 f"{config.LLM_API_KEY_ENV} 환경변수가 설정되어 있지 않습니다. "
-                "https://aistudio.google.com/apikey 에서 무료로 발급받아 .env 파일에 넣어주세요."
+                "https://platform.openai.com/api-keys 에서 발급받아 .env 파일에 넣어주세요."
             )
-        self.client = genai.Client(api_key=api_key)
+        self.client = OpenAI(api_key=api_key)
         self.model = model
 
     def analyze(self, user_text: str, cnn_result: dict) -> dict:
@@ -51,8 +50,7 @@ class SkinLLMAnalyzer:
         top_k_desc = ", ".join(
             f"{c['label']}({c['confidence']:.2f})" for c in cnn_result.get("top_k", [])
         )
-        prompt = (
-            f"{SYSTEM_PROMPT}\n\n"
+        user_prompt = (
             f"[사용자 텍스트 설명]\n{user_text}\n\n"
             f"[CNN 이미지 분류 결과]\n"
             f"예측 라벨: {cnn_result.get('predicted_label')}\n"
@@ -60,14 +58,14 @@ class SkinLLMAnalyzer:
             f"상위 후보: {top_k_desc}"
         )
 
-        response = self.client.models.generate_content(
+        completion = self.client.beta.chat.completions.parse(
             model=self.model,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                response_schema=SkinAnalysisResult,
-            ),
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": user_prompt},
+            ],
+            response_format=SkinAnalysisResult,
         )
 
-        result = SkinAnalysisResult.model_validate_json(response.text)
+        result = completion.choices[0].message.parsed
         return result.model_dump()
