@@ -1,13 +1,16 @@
 # 프로젝트 루트에 두고 실행:  docker compose up -d
+# CNN_WEIGHTS_PATH: cnn_best.pt를 서버 어디에 뒀는지 지정 (기본값은 저장소 안 상대경로).
+#   예: CNN_WEIGHTS_PATH=/srv/models/cnn_best.pt docker compose up -d
+#   또는 .env 파일에 CNN_WEIGHTS_PATH=/srv/models/cnn_best.pt 로 저장해두고 실행.
 services:
   skin-analysis:                 # 유정 — CNN + LLM 진단
     build: ./model
     ports: ["8001:8001"]
     env_file: ./model/.env       # OPENAI_API_KEY 등
     volumes:
-      # CNN 가중치는 용량 때문에 git에 안 올림. 배포 서버에 이 경로로 파일을
-      # 직접 옮겨둔 뒤(예: scp/Drive) 컨테이너에 마운트해서 씀.
-      - ./model/checkpoints/cnn_best.pt:/app/checkpoints/cnn_best.pt:ro
+      # CNN 가중치는 용량 때문에 git에 안 올림. 배포 서버에 파일을 직접
+      # 옮겨둔 뒤(예: scp/Drive) 컨테이너에 마운트해서 씀. 경로는 위 안내 참고.
+      - ${CNN_WEIGHTS_PATH:-./model/checkpoints/cnn_best.pt}:/app/checkpoints/cnn_best.pt:ro
     restart: unless-stopped
 
   recommend-api:                 # 철중 — 화장품 추천
