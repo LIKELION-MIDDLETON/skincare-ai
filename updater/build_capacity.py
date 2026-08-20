@@ -25,6 +25,61 @@ CAP_RE = re.compile(r"(\d+(?:\.\d+)?)\s*(ml|mL|ML|g|G|kg|KG|매|EA|ea)")
 # "30ml*10ea", "24ml X 10EA" 처럼 개당 용량 x 개수로 표기된 경우 총량으로 환산한다.
 MULT_RE = re.compile(r"^\s*[*xX×]\s*(\d+)")
 
+# "데이 75ml / 나이트 75ml", "본품 15ml/ 리필 15ml 2입"처럼 "/"로 나뉜 서로
+# 다른 이름의 구성품 2개가 실제로 같이 담겨 오는 경우, 첫 토큰(관례상 본품
+# 용량)만 뽑으면 실제 총 용량의 절반 이하로 잡혀서 1일가격이 그만큼(최대
+# 수 배) 부풀려진다. "증정/기획/사은품" 등은 이미 상위 필터(ml_engine.is_bundle)
+# 에서 후보 자체를 통째로 빼므로, 여기서는 "/" 딱 2조각으로만 나뉘고 각
+# 조각이 "<라벨> <숫자><단위>[<N>입|개]" 꼴로 깔끔하게 끝나는(다른 잡음이
+# 없는) 경우로만 한정해 합산한다 — "60mL / 60mL*2 / 150ml / ..." 처럼 실제로는
+# 구성품이 아니라 구매 옵션이 여러 개 나열된 경우는 조각이 3개 이상이라
+# 여기 안 걸리고 기존 로직(첫 토큰)으로 폴백한다.
+PAIR_SKIP_LABELS = re.compile(r"(증정|사은품|기획|미니|트래블|여행|키트|단품|대용량|옵션)")
+_PAREN_RE = re.compile(r"\([^)]*\)")
+_PART_RE = re.compile(
+    r"^\s*([가-힣A-Za-z][가-힣A-Za-z\s]{0,15}?)\s*[:：]?\s*"
+    r"(\d+(?:\.\d+)?)\s*(ml|mL|ML|g|G)\s*(.*)$"
+)
+_PART_MULT_RE = re.compile(r"^(\d+)\s*(입|개)$")
+
+
+def _parse_pair_part(part):
+    raw = part.strip()
+    if PAIR_SKIP_LABELS.search(raw):
+        return None  # "(증정)", "(본품)" 처럼 괄호 안에 붙은 표시도 괄호를 지우기 전에 먼저 걸러낸다
+    part = _PAREN_RE.sub("", raw).strip()
+    m = _PART_RE.match(part)
+    if not m:
+        return None
+    label, num, unit, rest = m.groups()
+    label = label.strip()
+    if PAIR_SKIP_LABELS.search(label):
+        return None
+    val = float(num)
+    rest = rest.strip()
+    if rest:
+        mm = _PART_MULT_RE.match(rest)
+        if not mm:
+            return None  # 못 알아듣는 꼬리표가 남으면 안전하게 포기
+        val *= int(mm.group(1))
+    return label, val, UNIT_MAP[unit.lower()]
+
+
+def parse_capacity_pair(text):
+    """"라벨 숫자단위 / 라벨 숫자단위" 2조각을 합산한다. 조건이 안 맞으면 None."""
+    if not text or "/" not in text:
+        return None
+    parts = text.split("/")
+    if len(parts) != 2:
+        return None
+    parsed = [_parse_pair_part(p) for p in parts]
+    if any(p is None for p in parsed):
+        return None
+    (l1, v1, u1), (l2, v2, u2) = parsed
+    if u1 != u2 or l1 == l2:
+        return None
+    return v1 + v2, u1
+
 # 카테고리 폴더/파일명(=상품별_효능_v4.csv의 "카테고리" 값)이 이 목록에
 # 속하면 매(장) 수 우선 파싱을 적용한다. 페이셜백(워시오프 클레이/버블팩 등)은
 # 낱개 포장이 아니라 실제로 ml/g 내용물이 맞아서 제외한다.
@@ -60,6 +115,9 @@ def parse_capacity(text, category=None):
         r = parse_capacity_sheet(text)
         if r:
             return r
+    r = parse_capacity_pair(text)
+    if r:
+        return r
     t = text.strip()
     m = CAP_RE.search(t)
     if not m:
