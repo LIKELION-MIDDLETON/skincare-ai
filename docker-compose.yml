@@ -4,6 +4,10 @@ services:
     build: ./model
     ports: ["8001:8001"]
     env_file: ./model/.env       # OPENAI_API_KEY 등
+    volumes:
+      # CNN 가중치는 용량 때문에 git에 안 올림. 배포 서버에 이 경로로 파일을
+      # 직접 옮겨둔 뒤(예: scp/Drive) 컨테이너에 마운트해서 씀.
+      - ./model/checkpoints/cnn_best.pt:/app/checkpoints/cnn_best.pt:ro
     restart: unless-stopped
 
   recommend-api:                 # 철중 — 화장품 추천
