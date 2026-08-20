@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 """화장품 추천 API v5 — 피부분석(CNN+LLM) + 설문을 그대로 입력받음"""
+from dotenv import load_dotenv
+load_dotenv()  # .env의 OPENAI_API_KEY(추천이유 생성용) 등을 읽어옴
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -82,6 +85,7 @@ def recommend(req: Req):
                     extra_rule=rule_adj, extra_ml=ml_adj,
                     force_unscented=flags["무향강제"],
                     prefer_unscented=flags.get("무향선호",False))
+    E.attach_reasons(r)  # 실패해도 조용히 넘어감(구성[].추천이유=None) — 아래는 그대로 진행
 
     # LLM / 설문 기반 의료 권고 보강
     need = bool(req.llm_result and req.llm_result.need_professional_care)
