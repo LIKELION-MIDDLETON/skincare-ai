@@ -10,6 +10,33 @@ EFF=["보습","유연","밀폐보습","장벽강화","진정","항산화","미�
 # 현재 수집한 카테고리를 슬롯별로 추천하므로 클렌징·팩·패치 등을
 # 상품명 기준으로 일괄 제외하지 않는다. 얼굴 외 부위 제품만 공통 제외한다.
 BAD=re.compile(r"(바디|body|헤어|샴푸|풋|핸드|제모|두피|네일)",re.I)
+
+# 다만 잔류형(leave-on) 슬롯에는 씻어내는 제형·국소 도포 제품이 들어오면 안 된다.
+# 올리브영 카테고리가 부정확해서 로션 카테고리에 클렌징밀크가, 크림 카테고리에
+# 아이크림·스팟 겔이 섞여 있다. 슬롯 의미(토너→로션→크림 순서)가 깨지므로
+# 해당 슬롯에서만 추가로 배제한다.
+LEAVE_ON_SLOTS={"토너","로션","크림","에센스/세럼"}
+BAD_LEAVE_ON=re.compile(
+    r"(클렌징|클렌저|클렌즈|워시|미셀라|딥클린"
+    r"|스팟|패치|오인트|겔제|아이크림|마스크팩|모델링팩|필오프)", re.I)
+# '다크스팟·잡티'의 '스팟'은 색소침착 소구라 정상 제품이다. 국소 치료제와 구분한다.
+DARK_SPOT=re.compile(r"(다크\s*스팟|톤앤스팟|스팟\s*코렉터|잡티|멜라)", re.I)
+
+def _core(name):
+    """괄호·대괄호 안(구성품·홍보문구)을 뺀 본품 이름"""
+    n=re.sub(r"\([^)]*\)"," ",name or "")
+    return re.sub(r"\[[^\]]*\]"," ",n)
+
+def _wrong_form(name, slot):
+    """잔류형 슬롯에 맞지 않는 제형인가"""
+    base=slot.split("/")[0] if slot else ""
+    if not any(k in slot for k in LEAVE_ON_SLOTS) and slot not in LEAVE_ON_SLOTS:
+        return False
+    c=_core(name)
+    if not BAD_LEAVE_ON.search(c): return False
+    if DARK_SPOT.search(c) and not re.search(r"(클렌징|워시|패치|아이크림)", c, re.I):
+        return False
+    return True
 # "기획"/"1+1" 류 묶음 상품은 크롤링 용량이 본품 하나가 아니라 증정품·리필
 # 등 여러 개가 합쳐진 표기라 1일 사용량·가격 계산이 왜곡된다. 우리는
 # 올리브영 대리구매 사이트가 아니라 성분 기준 추천이 목적이므로, 어느 쪽을
@@ -127,7 +154,8 @@ def recommend(probs, skin_type=None, alpha=0.6, budget_total=None,
     items=[]; total=0
     for order,slot,cats in SLOTS:
         cand=[p for p in products() if p["카테고리"] in cats and not BAD.search(p["name"])
-              and not BUNDLE.search(p["name"])]
+              and not BUNDLE.search(p["name"])
+              and not _wrong_form(p["name"], slot)]
         if force_unscented:
             hard=[p for p in cand if p["_uns"]]
             if len(hard)>=3: cand=hard          # 무향 제품만 (후보 부족 시 감점으로 fallback)
