@@ -57,6 +57,17 @@ BUNDLE=re.compile(
     r"|리필\s*(기획|증정)"
     r"|\d\s*개\s*입\s*세트)", re.I)
 
+def is_bundle(p):
+    """상품명엔 기획/증정 표시가 없어도 크롤링된 용량_원문에 "[슈링크기획]",
+    "[증정] ..." 처럼 박혀 있는 경우가 있다(예: 이벤트 박스, 기기 번들).
+    이런 건 이름만 봐서는 못 걸러내므로 용량_원문도 같이 검사한다."""
+    if BUNDLE.search(p["name"]):
+        return True
+    cap = p.get("_cap")
+    if cap and BUNDLE.search(cap.get("원문") or ""):
+        return True
+    return False
+
 # 진단 -> ML 타깃 가중치 (리뷰 라벨로 학습된 축)
 ML_W = {
  "acne_rosacea":          {"지성적합":1.0,"저자극":0.4,"진정효과":0.5},
@@ -154,7 +165,7 @@ def recommend(probs, skin_type=None, alpha=0.6, budget_total=None,
     items=[]; total=0
     for order,slot,cats in SLOTS:
         cand=[p for p in products() if p["카테고리"] in cats and not BAD.search(p["name"])
-              and not BUNDLE.search(p["name"])
+              and not is_bundle(p)
               and not _wrong_form(p["name"], slot)]
         if force_unscented:
             hard=[p for p in cand if p["_uns"]]
